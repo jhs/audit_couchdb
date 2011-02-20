@@ -44,7 +44,7 @@ function Couch(url) {
   })
 
   self.on('db_name', function(db_name) {
-    var db_url  = lib.join(self.url, db_name)
+    var db_url  = lib.join(self.url, encodeURIComponent(db_name))
       , sec_url = lib.join(db_url, '/_security')
       ;
 
@@ -57,6 +57,18 @@ function Couch(url) {
 
       if(data.info && data.security) {
         self.log.debug("Received metadata and security about db: " + db_url);
+
+        if(data.info.resp.statusCode     === 401 && data.info.body.error     === 'unauthorized'
+        && data.security.resp.statusCode === 401 && data.security.body.error === 'unauthorized') {
+          self.log.debug("No read permission: " + db_url);
+          self.emit('database_unauthorized', db_url)
+        } else if (data.info.resp.statusCode !== 200 || data.security.resp.statusCode !== 200
+                   || typeof data.info.body !== 'object' || typeof data.security.body !== 'object') {
+          throw new Error("Unknown db responses: " + JSON.stringify({db:db_info.data, security:security.data}));
+        } else {
+          self.emit('database_ok', db_url, data.info.body, data.security.body);
+        }
+
         self.emit('database', db_url, data.info, data.security);
       }
     }
@@ -64,21 +76,26 @@ function Couch(url) {
     self.log.debug("Fetching db metadata: " + db_url);
     self.request({uri:db_url}, function(er, resp, body) {
       if(er) throw er;
-      if(resp.statusCode !== 200 || typeof body !== 'object')
-        throw new Error("Bad db response from " + db_url + ": " + JSON.stringify(body));
-      got('info', body);
+      //if(resp.statusCode !== 200 || typeof body !== 'object' || false)
+      //  throw new Error("Bad db response from " + db_url + ": " + JSON.stringify(body));
+      got('info', {resp:resp, body:body});
     })
 
     self.log.debug("Fetching db security data: " + sec_url);
     self.request({uri:sec_url}, function(er, resp, body) {
       if(er) throw er;
-      if(resp.statusCode !== 200 || typeof body !== 'object')
-        throw new Error("Bad db response from " + db_url + ": " + JSON.stringify(body));
-      got('security', body);
+      //if(resp.statusCode !== 200 || typeof body !== 'object')
+      //  throw new Error("Bad db response from " + db_url + ": " + JSON.stringify(body));
+      got('security', {resp:resp, body:body});
     })
   })
 
-  self.on('database', function(db_url, db_info, security) {
+  self.on('database_unauthorized', function(db_url) {
+    self.finish_db(db_url);
+  })
+
+  self.on('database_ok', function(db_url, db_info, security) {
+    self.log.debug("Successful db fetch: " + db_url);
     var view = [ '/_all_docs?include_docs=false'
                , 'startkey=' + encodeURIComponent(JSON.stringify("_design/"))
                , 'endkey='   + encodeURIComponent(JSON.stringify("_design0"))

@@ -15,6 +15,18 @@ function CouchAudit(url) {
     self.low("People know you are using CouchDB v" + welcome.version);
   })
 
+  self.on('database_ok', function(url, info, security) {
+    if("readers" in security) {
+      // TODO
+    } else {
+      this.high("No security.readers: " + url);
+    }
+  })
+
+  self.on('database_unauthorized', function(url) {
+    this.low("Database is unauthorized: " + url);
+  })
+
   self.on('end', function() {
     console.log("DONE!");
   })
