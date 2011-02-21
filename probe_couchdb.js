@@ -209,7 +209,7 @@ Couch.prototype.start = function() {
   if(!self.url)
     throw new Error("url required");
 
-  self.log.info("Pinging: " + self.url);
+  self.log.debug("Pinging: " + self.url);
   self.request({uri:self.url}, function(er, resp, body) {
     if(er) throw er;
     if(resp.statusCode !== 200 || body.couchdb !== "Welcome")
