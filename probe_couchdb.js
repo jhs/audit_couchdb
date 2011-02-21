@@ -20,6 +20,12 @@ function Couch(url) {
 
   //
 
+  // If event A triggers event B, B should wait to emit until A is finished.
+  function emit() {
+    var args = arguments;
+    process.nextTick(function() { self.emit.apply(self, args) });
+  }
+
   self.on('couchdb', function(hello) {
     self.log.debug("Scanning databases: " + self.url);
     var all_dbs = lib.join(self.url, '/_all_dbs');
@@ -35,10 +41,10 @@ function Couch(url) {
       self.log.debug("Databases to check in " + self.url + ": " + JSON.stringify(dbs_to_check));
 
       if(dbs_to_check.length === 0)
-        self.emit('end');
+        emit('end');
 
       dbs_to_check.forEach(function(db_name) {
-        self.emit('db_name', db_name);
+        emit('db_name', db_name);
       })
     })
   })
@@ -64,14 +70,14 @@ function Couch(url) {
         || ok_codes.indexOf(data.security.resp.statusCode) == -1)
           throw new Error("Unknown db responses: " + JSON.stringify({db:db_info.data, security:security.data}));
         else
-          self.emit('database', db_url, data.info, data.security);
+          emit('database', db_url, data.info, data.security);
 
         if(data.info.resp.statusCode     === 401 && data.info.body.error     === 'unauthorized'
         && data.security.resp.statusCode === 401 && data.security.body.error === 'unauthorized') {
           self.log.debug("No read permission: " + db_url);
-          self.emit('database_unauthorized', db_url)
+          emit('database_unauthorized', db_url)
         } else {
-          self.emit('database_ok', db_url, data.info.body, data.security.body);
+          emit('database_ok', db_url, data.info.body, data.security.body);
         }
       }
     }
@@ -94,14 +100,14 @@ function Couch(url) {
   })
 
   self.on('database_unauthorized', function(db_url) {
-    self.emit('database_done', db_url);
+    emit('database_done', db_url);
   })
 
   self.on('database_done', function(db_url) {
     delete self.pending[db_url];
     if(Object.keys(self.pending).length === 0) {
       self.log.debug("All databases complete");
-      self.emit('end');
+      emit('end');
     }
   })
 
@@ -122,10 +128,10 @@ function Couch(url) {
       self.log.debug("Design documents in " + db_url + ": " + body.rows.map(function(x) { return x.id }).join(', '));
 
       if(body.rows.length === 0)
-        self.emit('database_done', db_url);
+        emit('database_done', db_url);
 
       body.rows.forEach(function(row) {
-        self.emit('ddoc_id', db_url, row.id);
+        emit('ddoc_id', db_url, row.id);
       })
     })
   })
@@ -143,7 +149,7 @@ function Couch(url) {
 
       if(data.ddoc && data.info) {
         self.log.debug("Received both contents and info about ddoc: " + ddoc_url);
-        self.emit('ddoc', db_url, data.ddoc, data.info);
+        emit('ddoc', db_url, data.ddoc, data.info);
       }
     }
 
@@ -168,7 +174,7 @@ function Couch(url) {
     delete self.pending[db_url][ddoc._id];
     if(Object.keys(self.pending[db_url]).length === 0) {
       self.log.debug("All design docs complete: " + db_url);
-      self.emit('database_done', db_url);
+      emit('database_done', db_url);
     }
   })
 
