@@ -27,8 +27,25 @@ function Couch(url) {
   }
 
   self.on('couchdb', function(hello) {
-    self.log.debug("Scanning databases: " + self.url);
     var all_dbs = lib.join(self.url, '/_all_dbs');
+
+    var data = {dbs: null, session:null};
+    function got(key, val) {
+      self.log.debug("Received " + key + " for " + self.url);
+      data[key] = val;
+
+      if(data.dbs && data.session) {
+        emit('session', data.session);
+
+        if(data.dbs.length === 0)
+          emit('end');
+        data.dbs.forEach(function(db_name) {
+          emit('db_name', db_name);
+        })
+      }
+    }
+
+    self.log.debug("Scanning databases: " + all_dbs);
     self.request({uri:all_dbs}, function(er, resp, body) {
       if(er) throw er;
       if(resp.statusCode !== 200 || !Array.isArray(body))
@@ -38,14 +55,20 @@ function Couch(url) {
       var dbs_to_check = body.filter(function(db_name) {
         return (!self.only_dbs) || (self.only_dbs.indexOf(db_name) === -1);
       })
+
       self.log.debug("Databases to check in " + self.url + ": " + JSON.stringify(dbs_to_check));
+      got('dbs', dbs_to_check);
+    })
 
-      if(dbs_to_check.length === 0)
-        emit('end');
+    var session = lib.join(self.url, '/_session');
+    self.log.debug("Checking login session: " + session);
+    self.request({uri:session}, function(er, resp, body) {
+      if(er) throw er;
+      if(resp.statusCode !== 200 || (!body) || body.ok !== true)
+        throw new Error("Bad _session from " + session + ": " + JSON.stringify(body));
 
-      dbs_to_check.forEach(function(db_name) {
-        emit('db_name', db_name);
-      })
+      self.log.debug("Received session: " + JSON.stringify(body));
+      got('session', body);
     })
   })
 
