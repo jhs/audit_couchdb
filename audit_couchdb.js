@@ -28,11 +28,33 @@ function CouchAudit(url) {
   })
 
   self.on('ddoc', function(db_url, ddoc, info) {
+    var ddoc_url = lib.join(db_url, ddoc._id);
+
     if(ddoc.language !== info.view_index.language)
       throw new Error("Different languages in ddoc vs. index info: " + JSON.stringify(info) + " vs. language = " + JSON.stringify(ddoc.language));
 
     if(ddoc.language !== 'javascript')
-      this.medium("Non-standard language '" + ddoc.language + '": ' + lib.join(db_url, ddoc._id));
+      this.medium("Non-standard language '" + ddoc.language + '": ' + ddoc_url);
+
+    // Detect unsafe rewrites.
+    (ddoc.rewrites || []).forEach(function(rule) {
+      var parts = rule.to.split(/\//);
+
+      var depth = 0
+        , minimum_depth = 0;
+      parts.forEach(function(part) {
+        depth += (part === '..' ? -1 : 1);
+        if(depth < minimum_depth)
+          minimum_depth = depth;
+      })
+
+      if(minimum_depth === -2)
+        self.low("Database-level rewrite " + JSON.stringify(rule) + ": " + ddoc_url);
+      else if(minimum_depth === -3)
+        self.medium("Root-level rewrite " + JSON.stringify(rule) + ": " + ddoc_url);
+      else if(minimum_depth < -3)
+        self.high("Unknown rewrite " + JSON.stringify(rule) + ": " + ddoc_url);
+    })
   })
 
   self.on('end', function() {
