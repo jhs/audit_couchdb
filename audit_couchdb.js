@@ -48,6 +48,11 @@ function CouchAudit(url) {
     var ddoc_url = lib.join(db_url, ddoc._id);
     ddocs_in_db[db_url].push(ddoc);
 
+    if(typeof ddoc.language === 'undefined') {
+      self.low('No language defined (assuming "javascript"): ' + ddoc_url);
+      ddoc.language = 'javascript';
+    }
+
     if(ddoc.language !== info.view_index.language)
       throw new Error("Different languages in ddoc vs. index info: " + JSON.stringify(info) + " vs. language = " + JSON.stringify(ddoc.language));
 
