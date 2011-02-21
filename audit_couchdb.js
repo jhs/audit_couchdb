@@ -57,7 +57,7 @@ function CouchAudit(url) {
       throw new Error("Different languages in ddoc vs. index info: " + JSON.stringify(info) + " vs. language = " + JSON.stringify(ddoc.language));
 
     if(ddoc.language !== 'javascript')
-      this.medium("Non-standard language '" + ddoc.language + '": ' + ddoc_url);
+      this.medium('Non-standard language "' + ddoc.language + '": ' + ddoc_url);
 
     // Detect unsafe rewrites.
     (ddoc.rewrites || []).forEach(function(rule) {
