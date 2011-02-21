@@ -203,7 +203,7 @@ Couch.prototype.request = function request_wrapper(opts, callback) {
   if(opts.method && opts.method !== "GET" && opts.method !== "HEAD")
     opts.headers['content-type'] = 'application/json';
 
-  return request.apply(this, [opts, json_body]);
+  return request.apply(self, [opts, json_body]);
 }
 
 Couch.prototype.start = function() {
