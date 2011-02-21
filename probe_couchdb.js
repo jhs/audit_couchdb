@@ -58,18 +58,21 @@ function Couch(url) {
       if(data.info && data.security) {
         self.log.debug("Received metadata and security about db: " + db_url);
 
+        var ok_codes = [200, 401];
+        if(typeof data.info.body !== 'object' || typeof data.security.body !== 'object'
+        || ok_codes.indexOf(data.info.resp.statusCode) === -1
+        || ok_codes.indexOf(data.security.resp.statusCode) == -1)
+          throw new Error("Unknown db responses: " + JSON.stringify({db:db_info.data, security:security.data}));
+        else
+          self.emit('database', db_url, data.info, data.security);
+
         if(data.info.resp.statusCode     === 401 && data.info.body.error     === 'unauthorized'
         && data.security.resp.statusCode === 401 && data.security.body.error === 'unauthorized') {
           self.log.debug("No read permission: " + db_url);
           self.emit('database_unauthorized', db_url)
-        } else if (data.info.resp.statusCode !== 200 || data.security.resp.statusCode !== 200
-                   || typeof data.info.body !== 'object' || typeof data.security.body !== 'object') {
-          throw new Error("Unknown db responses: " + JSON.stringify({db:db_info.data, security:security.data}));
         } else {
           self.emit('database_ok', db_url, data.info.body, data.security.body);
         }
-
-        self.emit('database', db_url, data.info, data.security);
       }
     }
 
