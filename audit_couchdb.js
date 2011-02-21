@@ -15,7 +15,11 @@ function CouchAudit(url) {
     self.low("People know you are using CouchDB v" + welcome.version);
   })
 
+  var ddocs_in_db = {};
   self.on('database_ok', function(url, info, security) {
+    self.log.debug("Tracking ddocs in database: " + url);
+    ddocs_in_db[url] = {};
+
     if("readers" in security) {
       // TODO
     } else {
@@ -27,8 +31,19 @@ function CouchAudit(url) {
     this.low("Database is unauthorized: " + url);
   })
 
+  self.on('database_done', function(url) {
+    var ddocs = Object.keys(ddocs_in_db[url]).map(function(k) { return ddocs_in_db[url][k] });
+
+    var validator_count = ddocs.reduce(function(sum, ddoc) { return sum + (ddoc.validate_doc_update ? 1 : 0) }, 0);
+    if(validator_count < 1)
+      self.medium('No validation functions (' + (ddocs.length === 0 ? 'no design documents' : 'from '+ddocs.length+' design documents') + '): ' + url);
+    else if(validator_count < ddocs.length)
+      self.low("Only " + validator_count + " validators out of " + ddocs.length + " design documents");
+  })
+
   self.on('ddoc', function(db_url, ddoc, info) {
     var ddoc_url = lib.join(db_url, ddoc._id);
+    ddocs_in_db[db_url][ddoc._id] = ddoc;
 
     if(ddoc.language !== info.view_index.language)
       throw new Error("Different languages in ddoc vs. index info: " + JSON.stringify(info) + " vs. language = " + JSON.stringify(ddoc.language));
