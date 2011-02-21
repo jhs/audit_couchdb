@@ -94,7 +94,15 @@ function Couch(url) {
   })
 
   self.on('database_unauthorized', function(db_url) {
-    self.finish_db(db_url);
+    self.emit('database_done', db_url);
+  })
+
+  self.on('database_done', function(db_url) {
+    delete self.pending[db_url];
+    if(Object.keys(self.pending).length === 0) {
+      self.log.debug("All databases complete");
+      self.emit('end');
+    }
   })
 
   self.on('database_ok', function(db_url, db_info, security) {
@@ -114,7 +122,7 @@ function Couch(url) {
       self.log.debug("Design documents in " + db_url + ": " + body.rows.map(function(x) { return x.id }).join(', '));
 
       if(body.rows.length === 0)
-        self.finish_db(db_url);
+        self.emit('database_done', db_url);
 
       body.rows.forEach(function(row) {
         self.emit('ddoc_id', db_url, row.id);
@@ -157,31 +165,15 @@ function Couch(url) {
   })
 
   self.on('ddoc', function(db_url, ddoc, info) {
-    self.finish_ddoc(db_url, ddoc._id);
+    delete self.pending[db_url][ddoc._id];
+    if(Object.keys(self.pending[db_url]).length === 0) {
+      self.log.debug("All design docs complete: " + db_url);
+      self.emit('database_done', db_url);
+    }
   })
 
 } // Couch
 util.inherits(Couch, events.EventEmitter);
-
-Couch.prototype.finish_ddoc = function(db_url, id) {
-  var self = this;
-
-  delete self.pending[db_url][id];
-  if(Object.keys(self.pending[db_url]).length === 0) {
-    self.log.debug("All design docs complete: " + db_url);
-    self.finish_db(db_url);
-  }
-}
-
-Couch.prototype.finish_db = function(db_url) {
-  var self = this;
-
-  delete self.pending[db_url];
-  if(Object.keys(self.pending).length === 0) {
-    self.log.debug("All databases complete");
-    self.emit('end');
-  }
-}
 
 Couch.prototype.request = function request_wrapper(opts, callback) {
   var self = this;
