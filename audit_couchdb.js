@@ -41,7 +41,7 @@ function CouchAudit(url) {
     if(validator_count < 1)
       self.medium('No validation functions (' + (ddocs.length === 0 ? 'no design documents' : 'from '+ddocs.length+' design documents') + '): ' + url);
     else if(validator_count < ddocs.length)
-      self.low("Only " + validator_count + " validators out of " + ddocs.length + " design documents");
+      self.low("Only " + validator_count + " validators out of " + ddocs.length + " design documents: " + url);
   })
 
   self.on('ddoc', function(db_url, ddoc, info) {
