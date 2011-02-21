@@ -27,6 +27,14 @@ function CouchAudit(url) {
     this.low("Database is unauthorized: " + url);
   })
 
+  self.on('ddoc', function(db_url, ddoc, info) {
+    if(ddoc.language !== info.view_index.language)
+      throw new Error("Different languages in ddoc vs. index info: " + JSON.stringify(info) + " vs. language = " + JSON.stringify(ddoc.language));
+
+    if(ddoc.language !== 'javascript')
+      this.medium("Non-standard language '" + ddoc.language + '": ' + lib.join(db_url, ddoc._id));
+  })
+
   self.on('end', function() {
     console.log("DONE!");
   })
