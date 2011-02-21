@@ -15,6 +15,36 @@ function CouchAudit(url) {
     self.low("People know you are using CouchDB v" + welcome.version);
   })
 
+  self.on('session', function(session) {
+    var is_admin = (session.userCtx.roles.indexOf('_admin') !== -1)
+      , name = session.userCtx.name;
+
+    if(name === null) {
+      if(is_admin)
+        self.high("Access: admin party");
+      else
+        self.low('Access: anonymous');
+    }
+
+    if(name) {
+      if(is_admin)
+        self.medium("Access: authenticated admin");
+      else
+        self.low("Access: authenticated user");
+
+      self.low("Site-wide roles: " + JSON.stringify(session.userCtx.roles));
+    }
+
+    if(session.info.authentication_db !== '_users')
+      this.medium('Non-standard authentication DB: ' + session.info.authentication_db);
+
+    var ok_handlers = ['oauth', 'cookie', 'default'];
+    session.info.authentication_handlers.forEach(function(handler) {
+      if(ok_handlers.indexOf(handler) === -1)
+        this.medium('Non-standard authentication handler: ' + handler);
+    })
+  })
+
   var ddocs_in_db = {};
   self.on('database_ok', function(url, info, security) {
     self.log.debug("Tracking ddocs in database: " + url);
