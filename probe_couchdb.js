@@ -184,8 +184,11 @@ Couch.prototype.request = function request_wrapper(opts, callback) {
   var self = this;
 
   function json_body(er, resp, body) {
-    if(!er)
-      body = JSON.parse(body);
+    if(!er) {
+      try      { body = JSON.parse(body) }
+      catch(e) { er = e }
+    }
+
     return callback && callback.apply(this, [er, resp, body]);
   }
 
