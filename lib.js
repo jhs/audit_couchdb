@@ -43,6 +43,41 @@ function join_and_fix_slashes() {
   }]).join('/');
 }
 
+function normalize_security(security) {
+  security = JSON.parse(JSON.stringify(security));
+  security.admins = security.admins || {};
+  security.admins.names = security.admins.names || [];
+  security.admins.roles = security.admins.roles || [];
+  security.readers = security.readers || {};
+  security.readers.names = security.readers.names || [];
+  security.readers.roles = security.readers.roles || [];
+  return security;
+}
+
+function admin_session(name) {
+  return { userCtx: { name:(name || null), roles:['_admin'] } }
+}
+
+function admin_party_session() {
+  return admin_session(null);
+}
+
+function normal_session(name, roles) {
+  return { userCtx: { name:(name || null), roles:(roles || []) } }
+}
+
+function anonymous_session() {
+  return normal_session(null, []);
+}
+
+session = { anonymous: anonymous_session
+          , admin_party: admin_party_session
+          , admin      : admin_session
+          , normal     : normal_session
+          };
+
 module.exports = { "getLogger"  : getLogger
                  , "join"       : join_and_fix_slashes
+                 , "normalize_security" : normalize_security
+                 , "session"    : session
                  };
