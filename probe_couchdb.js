@@ -72,6 +72,12 @@ function Couch(url) {
     })
   })
 
+  self.on('session', function(session) {
+    if(session.userCtx.roles.indexOf('_admin') === -1)
+      self.log.warn("Results will be incomplete without _admin access");
+    var roles = (session.userCtx || {}).roles || [];
+  })
+
   self.on('db_name', function(db_name) {
     var db_url  = lib.join(self.url, encodeURIComponent(db_name))
       , sec_url = lib.join(db_url, '/_security')
