@@ -47,13 +47,7 @@ function CouchAudit(url) {
 
     // Return an array of reasons why this session would be granted access to a given database's _security object.
     helpers.access_to = function enumerate_permissions(security, perm_test) {
-      security = JSON.parse(JSON.stringify(security));
-      security.admins = security.admins || {};
-      security.admins.names = security.admins.names || [];
-      security.admins.roles = security.admins.roles || [];
-      security.readers = security.readers || {};
-      security.readers.names = security.readers.names || [];
-      security.readers.roles = security.readers.roles || [];
+      security = lib.normalize_security(security);
 
       var rights = [];
       var right_tests = {sys_admin: false, admin:false, reader:false};
