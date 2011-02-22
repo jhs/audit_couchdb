@@ -31,9 +31,22 @@ function getLogger(label) {
   return log;
 }
 
+var url_parts = /(https?:\/\/)?([^:]+:[^@]+@)?(.*)$/;
+
+function get_creds(url) {
+  var match = url_parts.exec(url);
+  if(!match)
+    throw new Error("Cannot parse URL: " + url);
+  var auth = match[2];
+  match = /^(.*?):(.*)@$/.exec(auth);
+  if(!match)
+    return [null, null];
+  return [match[1], match[2]];
+}
+
 function scrub_creds(url) {
   if(typeof url === 'string')
-    url = url.replace(/(https?:\/\/)[^:]+:[^@]+@(.*)$/, '$1$2'); // Scrub username and password
+    url = url.replace(url_parts, '$1$3'); // Scrub username and password
   return url;
 }
 
