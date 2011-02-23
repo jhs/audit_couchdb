@@ -52,7 +52,7 @@ function CouchAudit(url) {
       else if(admin_names.length > 1)
         self.V({ level: 'medium'
                , fact : admin_names.length + " system admin accounts: " + JSON.stringify(admin_names)
-               , hint : 'In production, admins should be used rarely or never, but yet you have more than one'
+               , hint : 'In production, admins should be used rarely or never, but yet you have many'
                });
     }
 
