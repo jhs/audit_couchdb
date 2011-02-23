@@ -13,112 +13,65 @@ function CouchAudit(url) {
 
   self.known = {};
 
-  var session = []; // Initialize to a list of callbacks waiting for the value.
-  self.known.session = function on_known_session(cb, new_session) {
-    if(new_session) {
-      // Setting a new session.
-      session.forEach(function(cb) {
-        cb && cb(new_session);
-      })
-      session = new_session;
-    } else {
-      // Normal session fetch.
-      if(Array.isArray(session))
-        session.push(cb);
-      else
-        return cb && cb(session); // The callback list has been replace with the session itself.
+  var wait_for = { session: []
+                 , config : []
+                 , users  : []
+                 };
+
+  Object.keys(wait_for).forEach(function(key) {
+    self.known[key] = function on_known_value(cb, new_value) {
+      var current_val = wait_for[key];
+      if(new_value) {
+        current_val.forEach(function(cb) {
+          cb && cb(new_value);
+        })
+        wait_for[key] = new_value;
+      } else {
+        // Normal fetch.
+        if(Array.isArray(current_val))
+          current_val.push(cb)
+        else
+          return cb && cb(current_val); // The callback list has been replace with the session itself.
+      }
     }
-  }
+  })
 
   self.on('couchdb', function(welcome) {
     self.low("People know you are using CouchDB v" + welcome.version);
   })
 
+  self.on('config', function(config) {
+    // One thing to check is how many admins there are.
+    var admin_names = Object.keys(config.admins || {});
+    if(admin_names.length < 1)
+      self.V({ level: 'high'
+             , fact : 'This couch is in Admin Party'
+             , hint : 'Log in to Futon (/_utils) and click "Fix this"'
+             });
+    else if(admin_names.length > 1)
+      self.V({ level: 'medium'
+             , fact : admin_names.length + " system admin accounts: " + JSON.stringify(admin_names)
+             , hint : 'In production, admins should be used rarely or never, but yet you have more than one'
+             });
+
+    // Mark the config known for waiting functions.
+    self.known.config(null, config);
+  })
+
   self.on('session', function(session) {
-    var helpers =
-      { name       : function get_name() { return session.userCtx.name }
-      , name_h     : function get_name_human() { return helpers.name() || '(Anonymous)' }
-      , anonymous  : function is_anonymous() { return helpers.name() === null }
-      , role       : function has_role(r) { return session.userCtx.roles.indexOf(r) !== -1 }
-      , admin      : function is_admin() { return helpers.role('_admin') }
-      , admin_party: function is_admin_party() { return helpers.admin() && helpers.anonymous() }
-      , normal     : function is_normal() { return ! helpers.anonymous() }
-      }
-
-    // Return an array of reasons why this session would be granted access to a given database's _security object.
-    helpers.access_to = function enumerate_permissions(security, perm_test) {
-      security = lib.normalize_security(security);
-
-      var rights = [];
-      var right_tests = {sys_admin: false, admin:false, reader:false};
-
-      if(helpers.admin()) {
-        right_tests.sys_admin = true;
-        rights.push({reason:'server admin', right:'delete db'});
-        rights.push({reason:'server admin', right:'change ddocs'});
-      }
-
-      security.admins.names.forEach(function(name) {
-        if(name === helpers.name()) {
-          right_tests.admin = true;
-          var reason = 'admin name: ' + JSON.stringify(name);
-          rights.push({reason:reason, right:'read and change all docs and ddocs'});
-        }
-      })
-
-      security.admins.roles.forEach(function(role) {
-        if(helpers.role(role)) {
-          right_tests.admin = true;
-          var reason = 'admin role: ' + JSON.stringify(role);
-          rights.push({reason:reason, right:'read and change all docs and ddocs'});
-        }
-      })
-
-      security.readers.names.forEach(function(name) {
-        if(name === helpers.name()) {
-          right_tests.reader = true;
-          var reason = 'reader name: ' + JSON.stringify(name);
-          rights.push({reason:reason, right:'read all docs, change non-ddocs per validate_doc_update'});
-        }
-      })
-
-      security.readers.roles.forEach(function(role) {
-        if(helpers.role(role)) {
-          right_tests.reader = true;
-          var reason = 'reader role: ' + JSON.stringify(name);
-          rights.push({reason:reason, right:'read all docs, change non-ddocs per validate_doc_update'});
-        }
-      })
-
-      if(security.readers.names.length + security.readers.roles.length === 0) {
-        right_tests.reader = true;
-        var reason = 'public db';
-        rights.push({reason:reason, right:'read all docs, change non-ddocs per validate_doc_update'});
-      }
-
-      if(perm_test)
-        return right_tests[perm_test];
-      return rights;
-    }
-
-    Object.keys(helpers).forEach(function(helper_name) {
-      if(helper_name in session)
-        throw new Error("Woa, there. The session is crowding my helper name '"+helper_name+"': " + JSON.stringify(session));
-      session[helper_name] = helpers[helper_name];
-    })
+    session = new lib.Session(session);
+    var roles = '; site-wide roles: ' + JSON.stringify(session.userCtx.roles);
 
     if(session.anonymous()) {
       if(session.admin())
-        self.high("Access: admin party");
+        self.medium("Auditing as: admin party" + roles);
       else
-        self.low('Access: anonymous');
+        self.medium('Auditing as: anonymous' + roles);
     } else {
       if(session.admin())
-        self.medium("Access: authenticated admin");
+        self.medium("Auditing as: authenticated admin" + roles);
       else
-        self.low("Access: authenticated user");
-
-      self.low("Site-wide roles: " + JSON.stringify(session.userCtx.roles));
+        self.medium("Auditing as: authenticated user" + roles);
     }
 
     if(session.info.authentication_db !== '_users')
@@ -134,35 +87,41 @@ function CouchAudit(url) {
     self.known.session(null, session);
   })
 
+  var user_docs = [];
+  self.on('user', function(user_doc) {
+    if(user_doc) {
+      // Simply remember this for later.
+      user_docs.push(user_doc);
+    } else {
+      // The entire list of users is known. Compute each of their login sessions.
+      self.known.config(function(config) {
+        var user_pool = {};
+        user_docs.forEach(function(doc) {
+          var session = lib.Session.normal(doc.name, doc.roles, config);
+          user_pool[doc.name] = {doc:doc, session:session};
+        })
+
+        // Mark the list of users known for pending callbacks.
+        self.known.users(null, user_pool);
+      })
+    }
+  })
+
   self.on('database_ok', function(url, info, security) {
     self.log.debug("Tracking ddocs in database: " + url);
-    self.known[url] = {info:info, security:security, ddocs:[]};
+    var db = {info:info, security:security, ddocs: []};
+    self.known[url] = db;
 
-    self.known.session(function(session) {
-      if("readers" in security) {
-        var passes = session.access_to(security);
+    if(!('readers' in security))
+      self.V({ level: 'low'
+             , fact : 'No security.readers: ' + url
+             , hint : 'Your enemies know you can\'t be arsed to click the "Security" link'
+             });
 
-        if(passes.length < 1)
-          throw new Error("Can not figure out how you can read "+url+"; security="+JSON.stringify(security)+" ; session="+JSON.stringify(session));
-
-        if(passes.length > 1)
-          self.medium([session.name_h(), 'has', passes.length, 'ways to access', url].join(' '));
-
-        passes.forEach(function(perm) {
-          var msg = [session.name_h(), 'can', perm.right, url, 'because:', perm.reason].join(' ');
-          self.low(msg);
-        })
-      } else {
-        var msg = 'No security.readers: ' + url;
-
-        var extra;
-        if(session.admin_party())
-          extra = "But what do you care? You're already in Admin Party.";
-        if(session.anonymous())
-          extra = 'Your enemies know you can\'t be arsed even to click the "Security" link and hit "Update"';
-
-        self.high(msg + (extra ? " ("+extra+")" : ""));
-      }
+    self.known.users(function(users) {
+      var counts = lib.db_access_counts(users, db);
+      self.medium(counts.sys_admin + " server admins, " + counts.admin + " db admins: " + url);
+      self.low(counts.reader + ' readers, ' + counts.none + ' no-access: ' + url);
     })
   })
 
@@ -181,13 +140,53 @@ function CouchAudit(url) {
       self.low(db.ddocs.length + " design documents has only " + validator_count + " validators: " + url);
 
     if(validator_count < 1) {
-      var msg = 'No validation functions ('+db.ddocs.length+' design document' + (db.ddocs.length===1 ? 's' : '') + '): ' + url;
+      var msg = 'No validation functions ('+db.ddocs.length+' design documents): ' + url;
+
+      self.known.users(function(users) {
+        var anon_user = users[null];
+        if(anon_user.session.admin_party()) {
+          self.V({ level:'medium'
+                 , fact :msg
+                 , hint : "I would worry about Admin Party first, if I were you"
+                 });
+        } else if(anon_user.session.access_to(db.security).length > 0) {
+          self.V({ level:'high'
+                 , fact :msg
+                 , hint : "Your enemies can change and delete your "+db.info.doc_count+" docs."
+                        + " Are you fucking crazy?"
+                 });
+        } else {
+          // Okay, it's not Admin Party or wide open. But how bad is it?
+          var counts = lib.db_access_counts(users, db);
+          var hint = 'Users with access'
+                   + ': server admin=' + counts.sys_admin
+                   + '; db admin=' + counts.admin
+                   + '; reader=' + counts.reader
+                   + '; no access=' + counts.none;
+
+          if(counts.reader === 0)
+            self.V({ level:'low'
+                   , fact : msg
+                   , hint : hint + '; looks like only admins use this database'
+                   });
+          else
+            self.V({ level: 'high'
+                   , fact : msg
+                   , hint : hint + '; those ' + counts.reader + ' readers could destroy this db'
+                   });
+        }
+      })
+
       self.known.session(function(session) {
+        /*
         if(session.admin_party())
-          msg += " (But what do you care? You're already in Admin Party.)";
         else if(session.anonymous())
-          msg += " (Your enemies are changing and deleting your "+db.info.doc_count+" docs. Are you fucking crazy?)";
         else if(session.normal()) {
+          self.V({ level:'medium'
+                 , fact :msg
+                 , hint : "Your enemies can change and delete your "+db.info.doc_count+" docs."
+                        + " Are you fucking crazy?"
+                 });
           if(session.access_to(db.security, 'admin'))
             msg += " (Why bother giving "+session.name()+" admin access? You have bigger fish to fry.)";
           else
@@ -195,6 +194,7 @@ function CouchAudit(url) {
         }
 
         self.high(msg);
+        */
       })
     }
   })
@@ -242,10 +242,14 @@ function CouchAudit(url) {
 util.inherits(CouchAudit, probe_couchdb.Couch);
 
 ; ['low', 'medium', 'high'].forEach(function(level) {
-  CouchAudit.prototype[level] = function(message) {
-    this.emit('vulnerability', {level:level, message:message});
+  CouchAudit.prototype[level] = function(fact, hint) {
+    this.V({level:level, fact:fact, hint:hint});
   }
 })
+
+CouchAudit.prototype.V = function emit_vulnerability(vuln) {
+  this.emit('vulnerability', vuln);
+}
 
 module.exports = { "CouchAudit": CouchAudit
                  };

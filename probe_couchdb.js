@@ -6,7 +6,10 @@ var lib = require('./lib')
   , util = require('util')
   , events = require('events')
   , request = require('request')
+  , querystring = require('querystring')
   ;
+
+var MAX_USER_DEFAULT = 1000;
 
 function Couch(url) {
   var self = this;
@@ -16,6 +19,7 @@ function Couch(url) {
   self.url = url || null;
   self.proxy = null;
   self.only_dbs = null;
+  self.max_users = MAX_USER_DEFAULT;
   self.pending = {};
 
   //
@@ -73,9 +77,66 @@ function Couch(url) {
   })
 
   self.on('session', function(session) {
+    /*
     if(session.userCtx.roles.indexOf('_admin') === -1)
       self.log.warn("Results will be incomplete without _admin access");
-    var roles = (session.userCtx || {}).roles || [];
+    */
+  })
+
+  self.on('couchdb', function(hello) {
+    // Of course, the anonymous user is always known to exist.
+    emit('user', {name:null, roles:[]});
+  })
+
+  self.on('couchdb', function(hello) {
+    var config_url = lib.join(self.url, '/_config');
+    self.log.debug("Checking config: " + config_url);
+    self.request({uri:config_url}, function(er, resp, config) {
+      if(er) throw er;
+      if(resp.statusCode !== 200 || (typeof config !== 'object')) {
+        self.log.debug("Bad config response: " + JSON.stringify(config));
+        config = null;
+      }
+      emit('config', config);
+    })
+  })
+
+  self.on('config', function(config) {
+    // Once the config is known, the list of users can be established.
+    var auth_db = config && config.couch_httpd_auth && config.couch_httpd_auth.authentication_db;
+    if(!auth_db) {
+      auth_db = '_users';
+      self.log.warn('authentication_db not found in config; trying ' + JSON.stringify(auth_db));
+    }
+
+    var auth_db_url = lib.join(self.url, auth_db);
+    self.log.debug("Checking auth_db: " + auth_db_url);
+    self.request({uri:auth_db_url}, function(er, resp, info) {
+      if(er) throw er;
+      if(resp.statusCode !== 200 || typeof config !== 'object') {
+        self.log.warn("Can not access authentication_db: " + auth_db_url);
+        emit('users', users);
+      } else if(info.doc_count > self.max_users) {
+        throw new Error("Too many users; you must add a view to process them");
+      } else {
+        var query = {include_docs:'true', startkey:'"org.couchdb.user:"', endkey:'"org.couchdb.user;"'};
+        var users_query = lib.join(auth_db_url, '/_all_docs?' + querystring.stringify(query));
+        self.log.debug("Fetching all users: " + users_query);
+        self.request({uri:users_query}, function(er, resp, view) {
+          if(er) throw er;
+          if(resp.statusCode !== 200 || !Array.isArray(view.rows))
+            throw new Error("Failed to fetch user listing from " + users_query + ": " + JSON.stringify(view));
+
+          self.log.debug("Found " + view.rows.length + " users: " + auth_db_url);
+          view.rows.forEach(function(row) {
+            emit('user', row.doc);
+          })
+
+          // Signal the end of the users discovery.
+          emit('user', null);
+        })
+      }
+    })
   })
 
   self.on('db_name', function(db_name) {
@@ -241,6 +302,9 @@ Couch.prototype.start = function() {
 
   if(!self.url)
     throw new Error("url required");
+
+  self.username = lib.get_creds(self.url)[0];
+  self.password = lib.get_creds(self.url)[1];
 
   self.log.debug("Pinging: " + self.url);
   self.request({uri:self.url}, function(er, resp, body) {

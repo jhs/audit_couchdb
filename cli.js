@@ -35,7 +35,9 @@ couch.only_dbs = (argv.db ? [argv.db] : null);
 var count = 0;
 couch.on('vulnerability', function(problem) {
   count += 1;
-  var msg = [count, problem.level, problem.type, problem.message].join("\t");
+  var msg = [count, problem.level, problem.fact].join("\t");
+  if(problem.hint)
+    msg += " | " + problem.hint;
 
   if(problem.level === 'low')
     LOG.info(msg);
