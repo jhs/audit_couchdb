@@ -123,7 +123,7 @@ function Session(session) {
       if(helpers.role(role)) {
         if(perm_test === 'reader')
           return true;
-        var reason = 'reader role: ' + JSON.stringify(name);
+        var reason = 'reader role: ' + JSON.stringify(role);
         rights.push({type:'reader', reason:reason, right:'read all docs, change non-ddocs per validate_doc_update'});
       }
     })
