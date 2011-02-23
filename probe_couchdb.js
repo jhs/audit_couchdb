@@ -309,6 +309,12 @@ Couch.prototype.start = function() {
   self.log.debug("Pinging: " + self.url);
   self.request({uri:self.url}, function(er, resp, body) {
     if(er) throw er;
+    if(resp.statusCode === 401 || body.error === 'unauthorized') {
+      self.log.fatal('Not authorized: ' + self.url);
+      return;
+      //+ self.url);
+    }
+
     if(resp.statusCode !== 200 || body.couchdb !== "Welcome")
       throw new Error("Bad welcome from " + self.url + ": " + JSON.stringify(body));
 

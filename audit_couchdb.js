@@ -41,18 +41,20 @@ function CouchAudit(url) {
   })
 
   self.on('config', function(config) {
-    // One thing to check is how many admins there are.
-    var admin_names = Object.keys(config.admins || {});
-    if(admin_names.length < 1)
-      self.V({ level: 'high'
-             , fact : 'This couch is in Admin Party'
-             , hint : 'Log in to Futon (/_utils) and click "Fix this"'
-             });
-    else if(admin_names.length > 1)
-      self.V({ level: 'medium'
-             , fact : admin_names.length + " system admin accounts: " + JSON.stringify(admin_names)
-             , hint : 'In production, admins should be used rarely or never, but yet you have more than one'
-             });
+    if(config) {
+      // One thing to check is how many admins there are.
+      var admin_names = Object.keys(config.admins || {});
+      if(admin_names.length < 1)
+        self.V({ level: 'high'
+               , fact : 'This couch is in Admin Party'
+               , hint : 'Log in to Futon (/_utils) and click "Fix this"'
+               });
+      else if(admin_names.length > 1)
+        self.V({ level: 'medium'
+               , fact : admin_names.length + " system admin accounts: " + JSON.stringify(admin_names)
+               , hint : 'In production, admins should be used rarely or never, but yet you have more than one'
+               });
+    }
 
     // Mark the config known for waiting functions.
     self.known.config(null, config);

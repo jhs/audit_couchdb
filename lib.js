@@ -31,7 +31,7 @@ function getLogger(label) {
   return log;
 }
 
-var url_parts = /(https?:\/\/)?([^:]+:[^@]+@)?(.*)$/;
+var url_parts = /(https?:\/\/)([^:]+:[^@]+@)?(.*)$/;
 
 function get_creds(url) {
   var match = url_parts.exec(url);
