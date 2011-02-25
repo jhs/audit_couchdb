@@ -6,6 +6,7 @@
 , "homepage": "http://github.com/jhs/audit_couchdb"
 , "repository": { "type": "git"
                 , "url": "git://github.com/jhs/audit_couchdb" }
+, "dependencies": { "optimist": "*" }
 , "engines": [ "node" ]
 , "main": "audit_couchdb"
 , "bin": {"audit_couchdb": "./cli.js"}
