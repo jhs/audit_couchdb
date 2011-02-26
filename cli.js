@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // The audit_couchdb command-line interface.
 //
 
