@@ -2,8 +2,10 @@
 // The audit_couchdb command-line interface.
 //
 
-var lib = require('./lib')
+var fs = require('fs')
+  , lib = require('./lib')
   , LOG = lib.getLogger('audit_couchdb')
+  , assert = require('assert')
   , optimist = require('optimist')
   , audit_couchdb = require('audit_couchdb')
   ;
@@ -50,4 +52,27 @@ couch.on('vulnerability', function(problem) {
     throw new Error("Unknown problem level: " + JSON.stringify(problem));
 })
 
-couch.start();
+if(! argv.export) {
+  couch.start();
+} else {
+  var export_fd = fs.openSync(argv.export, 'w', 0666);
+  assert.ok(export_fd, "Cannot open export file: " + argv.export);
+
+  function csv() {
+    var args = Array.prototype.slice.apply(arguments);
+    args = args.map(function(col) {
+      assert.equal(typeof col, 'string', 'CSV column must be string');
+      //return JSON.stringify(col);
+      return "'" + col + "'";
+    })
+
+    return fs.writeSync(export_fd, args.join(',') + "\n");
+  }
+
+  csv('Level', 'Fact', 'Hint');
+  couch.on('vulnerability', function(problem) {
+    csv(problem.level, problem.fact, problem.hint || "");
+  })
+
+  couch.start();
+}
