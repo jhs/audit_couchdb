@@ -1,61 +1,6 @@
 // Miscellaneous helpers
 //
 
-// log4js is optional.
-function getLogger(label) {
-  var log;
-  try {
-    log = require('log4js')().getLogger(scrub_creds(label || 'audit_couchdb'));
-    log.setLevel('info');
-  } catch(e) {
-    log = { "trace": function() {}
-          , "debug": function() {}
-          , "info" : console.log
-          , "warn" : console.log
-          , "error": console.log
-          , "fatal": console.log
-          }
-    log.setLevel = function noop() {};
-  }
-
-  // Scrub credentials.
-  ; ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].forEach(function(level) {
-    var inner = log[level];
-    log[level] = function log_scrubbed() {
-      var args = Array.prototype.slice.apply(arguments);
-      args[0] = scrub_creds(args[0]);
-      return inner.apply(this, args);
-    }
-  })
-
-  return log;
-}
-
-var url_parts = /(https?:\/\/)([^:]+:[^@]+@)?(.*)$/;
-
-function get_creds(url) {
-  var match = url_parts.exec(url);
-  if(!match)
-    throw new Error("Cannot parse URL: " + url);
-  var auth = match[2];
-  match = /^(.*?):(.*)@$/.exec(auth);
-  if(!match)
-    return [null, null];
-  return [match[1], match[2]];
-}
-
-function scrub_creds(url) {
-  if(typeof url === 'string')
-    url = url.replace(url_parts, '$1$3'); // Scrub username and password
-  return url;
-}
-
-function join_and_fix_slashes() {
-  return Array.prototype.map.apply(arguments, [function trimmed(arg) {
-    return arg.replace(/^\/+/, "").replace(/\/+$/, "");
-  }]).join('/');
-}
-
 function normalize_security(security) {
   security = JSON.parse(JSON.stringify(security));
   security.admins = security.admins || {};
@@ -168,11 +113,10 @@ Session.anonymous = function anonymous_session() {
   return Session.normal(null, []);
 }
 
-function db_access_counts(users, db) {
+function db_access_counts(sessions, security) {
   var counts = {sys_admin:0, admin:0, reader:0, none:0};
-  Object.keys(users).forEach(function(name) {
-    var user = users[name];
-    var permissions = user.session.access_to(db.security);
+  sessions.forEach(function(session) {
+    var permissions = session.access_to(security);
     if(permissions.some(function(perm) { return perm.type === 'sys_admin' }))
       counts.sys_admin += 1;
     else if(permissions.some(function(perm) { return perm.type === 'admin' }))
@@ -185,10 +129,7 @@ function db_access_counts(users, db) {
   return counts;
 }
 
-module.exports = { "getLogger"  : getLogger
-                 , "join"       : join_and_fix_slashes
-                 , "normalize_security" : normalize_security
+module.exports = { "normalize_security" : normalize_security
                  , "Session"    : Session
-                 , "get_creds"  : get_creds
                  , "db_access_counts" : db_access_counts
                  };

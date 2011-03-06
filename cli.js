@@ -4,10 +4,9 @@
 
 var fs = require('fs')
   , lib = require('./lib')
-  , LOG = lib.getLogger('audit_couchdb')
   , assert = require('assert')
   , optimist = require('optimist')
-  , audit_couchdb = require('audit_couchdb')
+  , Audit = require('./audit_couchdb').CouchAudit
   ;
 
 function usage() {
@@ -17,10 +16,9 @@ function usage() {
 }
 
 var argv = optimist.default({level: 'info'})
-                   .argv
-  , couch_url = argv._[0]
-  ;
+                   .argv;
 
+var couch_url = argv._[0];
 if(!couch_url || argv.help) {
   usage();
   process.exit(couch_url ? 0 : 1);
@@ -29,9 +27,8 @@ if(!couch_url || argv.help) {
 if(!/^https?:\/\//.test(couch_url))
   couch_url = 'http://' + couch_url;
 
-var couch = new audit_couchdb.CouchAudit();
+var couch = new Audit;
 couch.url = couch_url;
-couch.proxy = argv.proxy || process.env.http_proxy;
 couch.log.setLevel(argv.level);
 couch.only_dbs = (argv.db ? [argv.db] : null);
 
@@ -43,36 +40,17 @@ couch.on('vulnerability', function(problem) {
     msg += " | " + problem.hint;
 
   if(problem.level === 'low')
-    LOG.info(msg);
+    couch.log.info(msg);
   else if(problem.level === 'medium')
-    LOG.warn(msg);
+    couch.log.warn(msg);
   else if(problem.level === 'high')
-    LOG.error(msg);
+    couch.log.error(msg);
   else
     throw new Error("Unknown problem level: " + JSON.stringify(problem));
 })
 
-if(! argv.export) {
-  couch.start();
-} else {
-  var export_fd = fs.openSync(argv.export, 'w', 0666);
-  assert.ok(export_fd, "Cannot open export file: " + argv.export);
+couch.on('end', function() {
+  couch.log.info("Scan complete");
+})
 
-  function csv() {
-    var args = Array.prototype.slice.apply(arguments);
-    args = args.map(function(col) {
-      assert.equal(typeof col, 'string', 'CSV column must be string');
-      //return JSON.stringify(col);
-      return "'" + col + "'";
-    })
-
-    return fs.writeSync(export_fd, args.join(',') + "\n");
-  }
-
-  csv('Level', 'Fact', 'Hint');
-  couch.on('vulnerability', function(problem) {
-    csv(problem.level, problem.fact, problem.hint || "");
-  })
-
-  couch.start();
-}
+couch.start();
