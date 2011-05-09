@@ -172,7 +172,7 @@ function CouchAudit () {
     db.known('validators', function(validators) {
       if(validators > 0) {
         self.V({ level: 'low'
-               , fact: db.name + ': confirmed with ' + validators + '"validate_doc_update" functions'
+               , fact: db.name + ': confirmed with ' + validators + ' "validate_doc_update" functions'
                , hint: 'Good job.'
                })
       } else {
