@@ -8,7 +8,7 @@
                 , "url": "git://github.com/jhs/audit_couchdb" }
 , "engines": [ "node" ]
 , "dependencies": { "optimist": ">=0.1.6"
-                  , "probe_couchdb": ">=0.1.1"
+                  , "probe_couchdb": ">=0.1.2"
                   }
 , "main": "audit_couchdb"
 , "bin": {"audit_couchdb": "./cli.js"}
