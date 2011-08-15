@@ -116,7 +116,7 @@ function CouchAudit () {
     if(! ('readers' in data.security))
       self.V({ level: 'low'
              , fact : data.db.name + ': no security.readers'
-             , hint : 'Your enemies know you can\'t be arsed to click the "Security" link'
+             , hint : 'Your enemies know you can\'t be bothered to click the "Security" link'
              });
   })
 
@@ -190,7 +190,7 @@ function CouchAudit () {
                   }
 
           if(anon_session.access_to(security).length > 0) {
-            v.hint = "Anonymous enemies can change and delete your "+metadata.doc_count+" docs. Are you fucking crazy?"
+            v.hint = "Anonymous enemies can change and delete your "+metadata.doc_count+" docs. Are you crazy?"
             self.V(v);
           } else {
             db.known('access_counts', function(counts) {
