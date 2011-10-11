@@ -9,6 +9,7 @@ var lib = require('./lib')
   , probe_couchdb = require('probe_couchdb')
   ;
 
+util.inherits(CouchAudit, probe_couchdb.CouchDB);
 function CouchAudit () {
   var self = this;
   probe_couchdb.CouchDB.call(self);
@@ -248,7 +249,6 @@ function CouchAudit () {
   })
 
 } // CouchAudit
-util.inherits(CouchAudit, probe_couchdb.CouchDB);
 
 ; ['low', 'medium', 'high'].forEach(function(level) {
   CouchAudit.prototype[level] = function(fact, hint) {
