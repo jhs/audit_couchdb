@@ -24,7 +24,7 @@ if(!/^https?:\/\//.test(couch_url))
 
 var couch = new probe_couchdb.CouchDB();
 couch.url = couch_url;
-couch.log.setLevel('debug');
+couch.log.setLevel(process.env.log || 'info');
 
 var count = 0;
 function line() {

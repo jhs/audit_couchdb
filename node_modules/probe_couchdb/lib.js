@@ -1,6 +1,16 @@
 // Miscellaneous helpers
 //
 
+var log4js = require('log4js')
+  , defaultable = require('defaultable')
+  ;
+
+module.exports = defaultable(
+{ 'log_label': 'probe_couchdb'
+, 'log_level': 'info'
+}, function(module, exports, DEFS) {
+
+
 module.exports = { "getLogger"  : getLogger
                  , "get_creds"  : get_creds
                  , "join"       : join_and_fix_slashes
@@ -9,28 +19,16 @@ module.exports = { "getLogger"  : getLogger
                  };
 
 
-// log4js is optional.
 function getLogger(label) {
-  var log;
-  try {
-    log = require('log4js')().getLogger(scrub_creds(label || 'audit_couchdb'));
-    log.setLevel('info');
-  } catch(e) {
-    log = { "trace": function() {}
-          , "debug": function() {}
-          , "info" : console.log
-          , "warn" : console.log
-          , "error": console.log
-          , "fatal": console.log
-          }
-    log.setLevel = function() {};
-    log.getLevel = function() {};
-  }
+  var log = log4js.getLogger(scrub_creds(label || DEFS.log_label));
+  log.setLevel(DEFS.log_level);
 
   // Scrub credentials.
   ; ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].forEach(function(level) {
     var inner = log[level];
-    log[level] = function log_scrubbed() {
+    log[level] = log_scrubbed;
+
+    function log_scrubbed() {
       var args = Array.prototype.slice.apply(arguments);
       args[0] = scrub_creds(args[0]);
       return inner.apply(this, args);
@@ -82,3 +80,5 @@ function isRegExp(obj) {
               str.match(/^\/.*\/[gim]{0,3}$/)
             )
 }
+
+}) // defaultable
