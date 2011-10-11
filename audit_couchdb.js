@@ -161,7 +161,7 @@ function CouchAudit () {
       })
 
       db.on('end', function() {
-        util.puts('DB END: ' + db.name);
+        //util.puts('DB END: ' + db.name);
         db.x_emit('validators', validators);
       })
     })
