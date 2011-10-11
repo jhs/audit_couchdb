@@ -1,7 +1,7 @@
 { "name": "audit_couchdb"
 , "version": "0.1.7"
 , "author": { "name": "Jason Smith"
-            , "email": "jhs@couchone.com" }
+            , "email": "jhs@iriscouch.com" }
 , "description": "Detect security issues in an Apache CouchDB server"
 , "homepage": "http://github.com/jhs/audit_couchdb"
 , "repository": { "type": "git"
