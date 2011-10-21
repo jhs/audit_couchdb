@@ -6,7 +6,7 @@ var lib = require('./lib')
   , CVEs = require('./cves')
   , join = require('probe_couchdb').join
   , events = require('events')
-  , probe_couchdb = require('probe_couchdb')
+  , probe_couchdb = require('probe_couchdb').defaults({'log_label':'audit_couchdb'})
   ;
 
 util.inherits(CouchAudit, probe_couchdb.CouchDB);
