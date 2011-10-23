@@ -1,5 +1,5 @@
 { "name": "audit_couchdb"
-, "version": "0.1.8"
+, "version": "0.2.0"
 , "author": { "name": "Jason Smith"
             , "email": "jhs@iriscouch.com" }
 , "description": "Detect security issues in an Apache CouchDB server"
@@ -10,7 +10,7 @@
 , "engines": [ "node" ]
 , "dependencies": { "optimist": "0.2.6"
                   , "defaultable": "0.5.0"
-                  , "probe_couchdb": "0.3.0"
+                  , "probe_couchdb": "0.3.1"
                   }
 , "main": "audit_couchdb"
 , "bin": {"audit_couchdb": "./cli.js"}
