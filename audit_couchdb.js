@@ -158,6 +158,19 @@ function CouchAudit () {
                    , hint : 'This document alone cannot not protect a database from arbitrary modifications'
                    });
         })
+
+        ddoc.on('code_error', function(er, name, type, code) {
+          var label = join(db.name, ddoc.id, '_view', name);
+          var vuln = { level: 'low'
+                     , fact : label + ' ' + type + ' function: ' + (er.message || er.stack || er)
+                     , hint : 'Standard, no-surprises source code is safest'
+                     };
+
+          if(('line' in er) && ('col' in er))
+            vuln.hint = 'At line ' + er.line + ', column ' + er.col;
+
+          self.V(vuln);
+        })
       })
 
       db.on('end', function() {
