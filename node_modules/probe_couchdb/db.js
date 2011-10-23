@@ -81,7 +81,7 @@ function Database () {
       if(er)
         return self.x_emit('error', er);
       else if(resp.statusCode === 401 && typeof body === 'object' && body.error === 'unauthorized') {
-        // Indicate no read permisssion.
+        // Indicate no read permission.
         self.x_emit('ddoc_ids', null);
       } else if(resp.statusCode === 200 && ("rows" in body)) {
         var ids = body.rows.map(function(row) { return row.id });
@@ -93,6 +93,7 @@ function Database () {
   })
 
   self.on('ddoc_ids', function emit_ddoc_probes(ids) {
+    ids = ids || [];
     self.log.debug('Creating probes for ' + ids.length + ' ddocs');
 
     if(ids.length === 0) {
