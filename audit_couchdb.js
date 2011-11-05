@@ -60,7 +60,7 @@ function CouchAudit () {
              });
   })
 
-  self.on('session', function(session) {
+  self.on('session', function(normal_session, session) {
     session = new lib.Session(session);
     var roles = '; site-wide roles: ' + JSON.stringify(session.userCtx.roles);
 
@@ -93,7 +93,12 @@ function CouchAudit () {
   self.on('users', function(users) {
     self.known('config', function(config) {
       if(!config) return; // Can't do this part.
-      var users_sessions = users.map(function(user) { return lib.Session.normal(user.name, user.roles, config) });
+
+      var users_sessions = Object.keys(users).map(function(name) {
+        var user = users[name];
+        return lib.Session.normal(user.name, user.roles, config);
+      });
+
       self.x_emit('sessions', users_sessions);
     })
   })
