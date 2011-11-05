@@ -1,5 +1,5 @@
 { "name": "audit_couchdb"
-, "version": "0.3.0"
+, "version": "0.3.1"
 , "author": { "name": "Jason Smith"
             , "email": "jhs@iriscouch.com" }
 , "description": "Detect security issues in an Apache CouchDB server"
