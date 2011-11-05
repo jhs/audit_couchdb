@@ -28,6 +28,7 @@ defaultable(module,
 
 module.exports = { "getLogger"  : getLogger
                  , "get_creds"  : get_creds
+                 , "isArray"    : isArray
                  , "join"       : join_and_fix_slashes
                  , "encode_id"  : encode_doc_id
                  , "isRegExp"   : isRegExp
@@ -124,6 +125,10 @@ function check_expr(source_code, type) {
 
   if(type == 'reduce')
     assert_formals('keys', 'values', 'rereduce');
+}
+
+function isArray(obj) {
+  return Array.isArray(obj);
 }
 
 }) // defaultable
