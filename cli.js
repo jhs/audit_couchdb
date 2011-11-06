@@ -15,7 +15,7 @@ function usage() {
               ].join("\n"));
 }
 
-var argv = optimist.default({level: 'info'})
+var argv = optimist.default({log: 'info'})
                    .argv;
 
 var couch_url = argv._[0];
@@ -29,7 +29,7 @@ if(!/^https?:\/\//.test(couch_url))
 
 var couch = new Audit;
 couch.url = couch_url;
-couch.log.setLevel(argv.level);
+couch.log.setLevel(argv.log);
 couch.only_dbs = (argv.db ? [argv.db] : null);
 
 var count = 0;
