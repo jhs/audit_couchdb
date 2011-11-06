@@ -10,7 +10,7 @@
 , "engines": [ "node" ]
 , "dependencies": { "optimist": "0.2.6"
                   , "defaultable": "0.5.0"
-                  , "probe_couchdb": "0.7.0"
+                  , "probe_couchdb": "0.7.1"
                   }
 , "main": "audit_couchdb"
 , "bin": {"audit_couchdb": "./cli.js"}
