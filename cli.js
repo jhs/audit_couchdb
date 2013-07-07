@@ -27,7 +27,7 @@ function main() {
     couch_url = 'http://' + couch_url
 
   var couch = OPTS.argv.replication
-                ? new audit_couchdb.Replication
+                ? new audit_couchdb.Replicator
                 : new audit_couchdb.CouchAudit
 
   couch.url = couch_url
@@ -70,7 +70,7 @@ function replication(couch) {
   console.log('Audit replication')
 
   couch.on('end', function() {
-    throw new Error('Replication audit ended')
+    couch.log.info('Replciator audit complete')
   })
 }
 

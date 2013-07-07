@@ -1,6 +1,11 @@
 // The audit_couchdb API
 //
 
+module.exports =
+  { "CouchAudit": CouchAudit
+  , "Replicator": require('./replicator')
+  }
+
 var lib = require('./lib')
   , util = require('util')
   , CVEs = require('./cves')
@@ -277,6 +282,3 @@ function CouchAudit () {
 CouchAudit.prototype.V = function emit_vulnerability(vuln) {
   this.emit('vulnerability', vuln);
 }
-
-module.exports = { "CouchAudit": CouchAudit
-                 };
