@@ -15,6 +15,5 @@
                   }
 , "main": "audit_couchdb"
 , "bin": { "audit_couchdb": "./cli.js"
-         , "audit_replication": "./replication.js"
          }
 }
