@@ -70,7 +70,7 @@ function replication(couch) {
   console.log('Audit replication')
 
   couch.on('end', function() {
-    couch.log.info('Replciator audit complete')
+    couch.log.info('Replicator audit complete')
   })
 }
 
