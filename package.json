@@ -1,9 +1,9 @@
 { "name": "audit_couchdb"
-, "version": "0.3.2"
+, "version": "0.4.0"
 , "author": { "name": "Jason Smith"
-            , "email": "jhs@iriscouch.com" }
-, "description": "Detect security issues in an Apache CouchDB server"
-, "tags": ["automation", "couchdb", "security", "audit"]
+            , "email": "jason.h.smith@gmail.com" }
+, "description": "Detect problems in an Apache CouchDB server"
+, "tags": ["automation", "couchdb", "security", "audit", "replication"]
 , "homepage": "http://github.com/jhs/audit_couchdb"
 , "repository": { "type": "git"
                 , "url": "git://github.com/jhs/audit_couchdb" }
@@ -13,5 +13,7 @@
                   , "probe_couchdb": "0.7.1"
                   }
 , "main": "audit_couchdb"
-, "bin": {"audit_couchdb": "./cli.js"}
+, "bin": { "audit_couchdb": "./cli.js"
+         , "audit_replication": "./replication.js"
+         }
 }
