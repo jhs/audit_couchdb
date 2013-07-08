@@ -5,6 +5,7 @@ module.exports = ReplicatorAudit
 
 
 var util = require('util')
+var async = require('async')
 var events = require('events')
 var probe_couchdb = require('probe_couchdb').defaults(
   { 'log_label': 'audit_couchdb_replication'
@@ -61,6 +62,46 @@ ReplicatorAudit.prototype.welcome = function(welcome) {
 
 ReplicatorAudit.prototype.audit_replicator = function(db_name) {
   var self = this
+  self.log.debug('Check replicator db: %s', db_name)
 
-  self.log.error('I should audit: %s', db_name)
+  var db_url = probe_couchdb.join(self.url, db_name, '/_changes?include_docs=true')
+  self.request(db_url, function(er, res, changes) {
+    if(er)
+      return self.x_emit('error', er)
+
+    changes = (changes.results || [])
+                .map(function(change) { return change.doc || {} })
+                .filter(is_replication_doc)
+
+    async.forEach(changes, audit, audited)
+
+    function audit(doc, to_async) {
+      process.nextTick(function() {
+        self.audit_replication(doc, to_async)
+      })
+    }
+
+    function audited(er) {
+      if(er)
+        return self.x_emit('error', er)
+
+      self.x_emit('audit_done')
+    }
+  })
+}
+
+ReplicatorAudit.prototype.audit_replication = function(doc, callback) {
+  var self = this
+  self.log.debug('Audit replication: %j', doc)
+
+  var state = doc._replication_state
+  if(!state)
+    return callback(new Error('Unknown replication doc: ' + JSON.stringify(doc)))
+
+  process.nextTick(callback)
+}
+
+
+function is_replication_doc(doc) {
+  return doc && (typeof doc._id == 'string') && !doc._id.match(/^_design\//)
 }
