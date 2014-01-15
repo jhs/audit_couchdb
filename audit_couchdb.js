@@ -124,9 +124,9 @@ function CouchAudit () {
   })
 
   self.on('db_ok', function(data) {
-    if(! ('readers' in data.security))
+    if(! ('readers' in data.security) && ! ('members' in data.security))
       self.V({ level: 'low'
-             , fact : data.db.name + ': no security.readers'
+             , fact : data.db.name + ': no security.readers or security.members'
              , hint : 'Your enemies know you can\'t be bothered to click the "Security" link'
              });
   })
