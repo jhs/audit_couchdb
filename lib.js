@@ -6,7 +6,7 @@ function normalize_security(security) {
   security.admins = security.admins || {};
   security.admins.names = security.admins.names || [];
   security.admins.roles = security.admins.roles || [];
-  security.readers = security.readers || {};
+  security.readers = security.readers || security.members || {};
   security.readers.names = security.readers.names || [];
   security.readers.roles = security.readers.roles || [];
   return security;
